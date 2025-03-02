@@ -2,11 +2,14 @@
 
 Model Context Protocol server for Trino, providing AI models with structured access to Trino's distributed SQL query engine.
 
+⚠️ **EARLY DEVELOPMENT STAGE (v0.1)** ⚠️  
+This project is in early development with many features still being implemented and tested. Use accordingly.
+
 ## Features
 
 - Exposes Trino resources through MCP protocol
 - Enables AI tools to query and analyze data in Trino
-- Supports both WebSockets and SSE transports
+- Provides transport options (STDIO transport works reliably; SSE transport has serious issues)
 - Fixed catalog handling for proper Trino query execution
 
 ## Usage
@@ -22,31 +25,31 @@ The server will be available at:
 
 ## Transport Options
 
-This server supports two transport methods:
+This server supports two transport methods, but only STDIO is currently reliable:
 
-### STDIO Transport (Recommended)
+### STDIO Transport (Recommended and Working)
 
-STDIO transport works reliably and is the recommended method for testing and development:
+STDIO transport works reliably and is currently the only recommended method for testing and development:
 
 ```bash
 # Run with STDIO transport inside the container
 docker exec -i trino_mcp_trino-mcp_1 python -m trino_mcp.server --transport stdio --debug --trino-host trino --trino-port 8080 --trino-user trino --trino-catalog memory
 ```
 
-### SSE Transport (Default but has issues)
+### SSE Transport (NOT RECOMMENDED - Has Critical Issues)
 
-SSE is the default transport but has known issues with MCP 1.3.0:
+SSE is the default transport in MCP but has serious issues with the current MCP 1.3.0 version, causing server crashes on client disconnections. **Not recommended for use until these issues are resolved**:
 
 ```bash
-# Run with SSE transport (with potential connection issues)
+# NOT RECOMMENDED: Run with SSE transport (crashes on disconnection)
 docker exec trino_mcp_trino-mcp_1 python -m trino_mcp.server --transport sse --host 0.0.0.0 --port 8000 --debug
 ```
 
 ## Known Issues
 
-### MCP 1.3.0 SSE Issues
+### MCP 1.3.0 SSE Transport Crashes
 
-There's a known issue with MCP 1.3.0's SSE transport that causes server crashes when clients disconnect. This is why we recommend using STDIO transport instead. The error manifests as:
+There's a critical issue with MCP 1.3.0's SSE transport that causes server crashes when clients disconnect. Until a newer MCP version is integrated, use STDIO transport exclusively. The error manifests as:
 
 ```
 RuntimeError: generator didn't stop after athrow()
@@ -74,17 +77,19 @@ Key files:
 
 ## Development
 
+**IMPORTANT**: All scripts must be run in the context of the Docker environment, as they connect to services inside the Docker network at this time.
+
 ```bash
 # Install development dependencies
 pip install -e ".[dev]"
 
-# Run automated tests 
+# Run automated tests (against the Docker container)
 ./run_tests.sh
 
-# Test MCP with STDIO transport (recommended)
+# Test MCP using STDIO transport (requires Docker running)
 python test_mcp_stdio.py
 
-# Simple example query
+# Simple example query (requires Docker running)
 python examples/simple_mcp_query.py "SELECT 'Hello World' AS message"
 ```
 
@@ -94,6 +99,7 @@ To test that Trino queries are working correctly, use the STDIO transport test s
 
 ```bash
 # Recommended test method (STDIO transport)
+# Requires Docker containers to be running
 python test_mcp_stdio.py
 ```
 
@@ -103,11 +109,25 @@ This script demonstrates end-to-end flow including:
 3. Executing queries against Trino
 4. Handling errors appropriately
 
-For SSE transport testing (may have connection issues with MCP 1.3.0):
+For SSE transport testing (currently broken with MCP 1.3.0):
 ```bash
-# Alternative test method (SSE transport)
+# DO NOT USE until MCP SSE issues are fixed
 python scripts/test_messages.py
 ```
+
+## Future Work
+
+This is an early v0.1 version with many planned improvements:
+
+- [ ] Integrate with newer MCP versions when available to fix SSE transport issues
+- [ ] Add more comprehensive query validation across different types and complexities
+- [ ] Implement support for more data types and advanced Trino features
+- [ ] Improve error handling and recovery mechanisms
+- [ ] Add user authentication and permission controls
+- [ ] Create more comprehensive examples and documentation
+- [ ] Develop admin monitoring and management interfaces
+- [ ] Add performance metrics and query optimization hints
+- [ ] Implement support for long-running queries and result streaming
 
 ## License
 

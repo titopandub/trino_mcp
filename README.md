@@ -391,6 +391,7 @@ This example demonstrates how an LLM can:
 
 This is an early v0.1 version with many planned improvements:
 
+- [ ] **HIGH PRIORITY**: Integrate the LLM-friendly FastAPI interface directly into the MCP server, eliminating the need for separate wrapper scripts that use `docker exec`
 - [ ] Integrate with newer MCP versions when available to fix SSE transport issues
 - [ ] Add/Validate support for Hive, JDBC, and other connectors
 - [ ] Add more comprehensive query validation across different types and complexities

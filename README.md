@@ -277,6 +277,116 @@ LLMs can use the Trino MCP server to:
    "The highest paying job title is 'Advanced Innovation Jedi' with an average salary of $241,178.50"
    ```
 
+### Real LLM Analysis Example: Bullshit Jobs by Company
+
+Here's a real example of what an LLM could produce when asked to "Identify the companies with the most employees in bullshit jobs and create a Mermaid chart":
+
+#### Step 1: LLM generates and runs the query
+
+```sql
+SELECT 
+  company, 
+  COUNT(*) as employee_count, 
+  AVG(bullshit_factor) as avg_bs_factor 
+FROM 
+  memory.bullshit.real_bullshit_data 
+WHERE 
+  bullshit_factor > 7 
+GROUP BY 
+  company 
+ORDER BY 
+  employee_count DESC, 
+  avg_bs_factor DESC 
+LIMIT 10
+```
+
+#### Step 2: LLM gets and analyzes the results
+
+```
+COMPANY | EMPLOYEE_COUNT | AVG_BS_FACTOR
+----------------------------------------
+Unknown Co | 2 | 9.0
+BitEdge | 1 | 10.0
+CyberWare | 1 | 10.0
+BitLink | 1 | 10.0
+AlgoMatrix | 1 | 10.0
+CryptoHub | 1 | 10.0
+BitGrid | 1 | 10.0
+MLStream | 1 | 10.0
+CloudCube | 1 | 10.0
+UltraEdge | 1 | 10.0
+```
+
+#### Step 3: LLM generates a Mermaid chart visualization
+
+```mermaid
+%%{init: {'theme': 'forest'}}%%
+graph LR
+    title[Companies with Most Bullshit Jobs]
+    style title fill:#333,stroke:#333,stroke-width:1px,color:white,font-weight:bold,font-size:18px
+
+    Companies --> UnknownCo[Unknown Co]
+    Companies --> BitEdge[BitEdge]
+    Companies --> CyberWare[CyberWare]
+    Companies --> BitLink[BitLink]
+    Companies --> AlgoMatrix[AlgoMatrix]
+    Companies --> CryptoHub[CryptoHub]
+    Companies --> BitGrid[BitGrid]
+    Companies --> MLStream[MLStream]
+    Companies --> CloudCube[CloudCube]
+    Companies --> UltraEdge[UltraEdge]
+    
+    UnknownCo --- Count2[2 employees]
+    BitEdge --- Count1a[1 employee]
+    CyberWare --- Count1b[1 employee]
+    BitLink --- Count1c[1 employee]
+    AlgoMatrix --- Count1d[1 employee]
+    CryptoHub --- Count1e[1 employee]
+    BitGrid --- Count1f[1 employee]
+    MLStream --- Count1g[1 employee]
+    CloudCube --- Count1h[1 employee]
+    UltraEdge --- Count1i[1 employee]
+    
+    classDef company fill:#ff5733,stroke:#333,stroke-width:1px,color:white,font-weight:bold;
+    classDef count fill:#006100,stroke:#333,stroke-width:1px,color:white,font-weight:bold;
+    
+    class UnknownCo,BitEdge,CyberWare,BitLink,AlgoMatrix,CryptoHub,BitGrid,MLStream,CloudCube,UltraEdge company;
+    class Count2,Count1a,Count1b,Count1c,Count1d,Count1e,Count1f,Count1g,Count1h,Count1i count;
+```
+
+**Alternative Bar Chart:**
+
+```mermaid
+%%{init: {'theme': 'default'}}%%
+pie showData
+    title Companies with Bullshit Jobs
+    "Unknown Co (BS: 9.0)" : 2
+    "BitEdge (BS: 10.0)" : 1
+    "CyberWare (BS: 10.0)" : 1
+    "BitLink (BS: 10.0)" : 1
+    "AlgoMatrix (BS: 10.0)" : 1
+    "CryptoHub (BS: 10.0)" : 1
+    "BitGrid (BS: 10.0)" : 1
+    "MLStream (BS: 10.0)" : 1
+    "CloudCube (BS: 10.0)" : 1
+    "UltraEdge (BS: 10.0)" : 1
+```
+
+#### Step 4: LLM provides key insights
+
+The LLM can analyze the data and provide insights:
+
+- "Unknown Co" has the most employees in bullshit roles (2), while all others have just one
+- Most companies have achieved a perfect 10.0 bullshit factor score
+- Tech-focused companies (BitEdge, CyberWare, etc.) seem to create particularly meaningless roles
+- Bullshit roles appear concentrated at executive or specialized position levels
+
+This example demonstrates how an LLM can:
+1. Generate appropriate SQL queries based on natural language questions
+2. Process and interpret the results from Trino
+3. Create visual representations of the data
+4. Provide meaningful insights and analysis
+
 ## Future Work
 
 This is an early v0.1 version with many planned improvements:

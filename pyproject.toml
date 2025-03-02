@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "trino-mcp"
+version = "0.1.0"
+description = "Model Context Protocol (MCP) server for Trino"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Trino MCP Team"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+]
+dependencies = [
+    "mcp>=1.3.0,<1.4.0",
+    "fastapi>=0.100.0",
+    "trino>=0.329.0",
+    "pydantic>=2.0.0",
+    "loguru>=0.7.0",
+    "uvicorn>=0.23.0",
+    "contextlib-chdir>=1.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.4.0",
+    "pytest>=7.3.1",
+    "pytest-cov>=4.1.0",
+]
+
+[project.scripts]
+trino-mcp = "trino_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/trino_mcp"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false

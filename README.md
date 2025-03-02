@@ -12,6 +12,58 @@ This project is in early development with many features still being implemented 
 - Provides transport options (STDIO transport works reliably; SSE transport has serious issues)
 - Fixed catalog handling for proper Trino query execution
 
+## LLM Integration
+
+Want to give an LLM direct access to query your Trino instance? We've created simple tools for that!
+
+### Command-Line LLM Interface
+
+The simplest way to let an LLM query Trino is through our command-line tool:
+
+```bash
+# Simple direct query (perfect for LLMs)
+python llm_query_trino.py "SELECT * FROM memory.bullshit.real_bullshit_data LIMIT 5"
+
+# Specify a different catalog or schema
+python llm_query_trino.py "SELECT * FROM information_schema.tables" memory information_schema
+```
+
+### REST API for LLMs
+
+For more integrated experiences, run the REST API server:
+
+```bash
+# Install FastAPI and uvicorn first
+pip install fastapi uvicorn
+
+# Start the API server
+uvicorn llm_trino_api:app --reload
+```
+
+This creates endpoints at:
+- `GET http://localhost:8000/` - API usage info
+- `POST http://localhost:8000/query` - Execute SQL queries
+
+You can then have your LLM make HTTP requests to this endpoint:
+
+```python
+# Example code an LLM might generate
+import requests
+
+def query_trino(sql_query):
+    response = requests.post(
+        "http://localhost:8000/query",
+        json={"query": sql_query}
+    )
+    return response.json()
+
+# LLM-generated query
+results = query_trino("SELECT job_title, AVG(salary) FROM memory.bullshit.real_bullshit_data GROUP BY job_title ORDER BY AVG(salary) DESC LIMIT 5")
+print(results["formatted_results"])
+```
+
+This approach allows LLMs to focus on generating SQL, while our tools handle all the MCP protocol complexity!
+
 ## Demo and Validation Scripts 🚀
 
 We've created some badass demo scripts that show how AI models can use the MCP protocol to run complex queries against Trino:

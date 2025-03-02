@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.2 (2023-06-01)
+
+### ✨ New Features
+
+- **Integrated LLM API**: Added a native REST API endpoint to the MCP server for direct LLM queries
+- **Built-in FastAPI Endpoint**: Port 8001 now exposes a JSON API for running SQL queries without wrapper scripts
+- **Query Endpoint**: Added `/api/query` endpoint for executing SQL against Trino with JSON responses
+
+### 📝 Documentation 
+
+- Updated README with API usage instructions
+- Added code examples for the REST API
+
 ## v0.1.1 (2023-05-17)
 
 ### 🐛 Bug Fixes

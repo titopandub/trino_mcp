@@ -65,7 +65,7 @@ services:
     container_name: trino_mcp_trino-mcp_1
     ports:
       - "9096:8000"  # Main MCP SSE port
-      - "9097:8001"  # Health check port
+      - "9097:8001"  # LLM API port with health check endpoint
     volumes:
       - mcp-logs:/app/logs
     environment:

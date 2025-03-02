@@ -29,13 +29,13 @@ ENV TRINO_PORT=8080
 ENV TRINO_USER=trino
 ENV TRINO_CATALOG=memory
 
-# Expose ports for SSE transport and health check
+# Expose ports for SSE transport and LLM API
 EXPOSE 8000 8001
 
 # Switch to non-root user
 USER trino
 
-# Health check - use port 8001 for the health check endpoint
+# Health check - use port 8001 for the health check endpoint and LLM API
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8001/health || exit 1
 

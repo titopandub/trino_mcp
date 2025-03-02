@@ -2,15 +2,36 @@
 
 Model Context Protocol server for Trino, providing AI models with structured access to Trino's distributed SQL query engine.
 
-⚠️ **EARLY DEVELOPMENT STAGE (v0.1)** ⚠️  
-This project is in early development with many features still being implemented and tested. Feel free to fork and contribute! Use accordingly.
+⚠️ **BETA RELEASE (v0.1.2)** ⚠️  
+This project is stabilizing with core features working and tested. Feel free to fork and contribute!
 
 ## Features
 
-- Exposes Trino resources through MCP protocol
-- Enables AI tools to query and analyze data in Trino
-- Provides transport options (STDIO transport works reliably; SSE transport has serious issues)
-- Fixed catalog handling for proper Trino query execution
+- ✅ Fixed Docker container API initialization issue! (reliable server initalization)
+- ✅ Exposes Trino resources through MCP protocol
+- ✅ Enables AI tools to query and analyze data in Trino
+- ✅ Provides transport options (STDIO transport works reliably; SSE transport has issues)
+- ✅ Fixed catalog handling for proper Trino query execution
+- ✅ Both Docker container API and standalone Python API server options
+
+## Quick Start
+
+```bash
+# Start the server with docker-compose
+docker-compose up -d
+
+# Verify the API is working
+curl -X POST "http://localhost:9097/api/query" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "SELECT 1 AS test"}'
+```
+
+Need a non-containerized version? Run the standalone API:
+
+```bash
+# Run the standalone API server on port 8008
+python llm_trino_api.py
+```
 
 ## LLM Integration
 
@@ -30,19 +51,31 @@ python llm_query_trino.py "SELECT * FROM information_schema.tables" memory infor
 
 ### REST API for LLMs
 
-For more integrated experiences, run the REST API server:
+We offer two API options for integration with LLM applications:
+
+#### 1. Docker Container API (Port 9097)
+
+The Docker container exposes a REST API on port 9097:
 
 ```bash
-# Install FastAPI and uvicorn first
-pip install fastapi uvicorn
+# Execute a query against the Docker container API
+curl -X POST "http://localhost:9097/api/query" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "SELECT 1 AS test"}'
+```
 
-# Start the API server
-uvicorn llm_trino_api:app --reload
+#### 2. Standalone Python API (Port 8008)
+
+For more flexible deployments, run the standalone API server:
+
+```bash
+# Start the API server on port 8008
+python llm_trino_api.py
 ```
 
 This creates endpoints at:
-- `GET http://localhost:8000/` - API usage info
-- `POST http://localhost:8000/query` - Execute SQL queries
+- `GET http://localhost:8008/` - API usage info
+- `POST http://localhost:8008/query` - Execute SQL queries
 
 You can then have your LLM make HTTP requests to this endpoint:
 
@@ -52,7 +85,7 @@ import requests
 
 def query_trino(sql_query):
     response = requests.post(
-        "http://localhost:8000/query",
+        "http://localhost:8008/query",
         json={"query": sql_query}
     )
     return response.json()
@@ -105,14 +138,20 @@ Innovation Technical Architect | 1                    |            235210.00 |  
 ...and more!
 ```
 
-### 3. Validation for LLMs
+### 3. API Testing
 
-These scripts demonstrate how an LLM agent could use the MCP to:
-1. Initialize a connection to Trino via MCP
-2. Set the correct catalog context (essential for getting results)
-3. Run complex queries with proper SQL syntax
-4. Process the nested JSON response format
-5. Parse and present the results to users
+The `test_llm_api.py` script validates the API functionality:
+
+```bash
+# Test the Docker container API 
+python test_llm_api.py
+```
+
+This performs a comprehensive check of:
+- API endpoint discovery
+- Documentation availability
+- Valid query execution
+- Error handling for invalid queries
 
 ## Usage
 
@@ -124,6 +163,7 @@ docker-compose up -d
 The server will be available at:
 - Trino: http://localhost:9095
 - MCP server: http://localhost:9096
+- API server: http://localhost:9097
 
 ## Client Connection
 
@@ -162,7 +202,24 @@ SSE is the default transport in MCP but has serious issues with the current MCP 
 docker exec trino_mcp_trino-mcp_1 python -m trino_mcp.server --transport sse --host 0.0.0.0 --port 8000 --debug
 ```
 
-## Known Issues
+## Known Issues and Fixes
+
+### Fixed: Docker Container API Initialization
+
+✅ **FIXED**: We've resolved an issue where the API in the Docker container returned 503 Service Unavailable responses. The problem was with the `app_lifespan` function not properly initializing the `app_context_global` and Trino client connection. The fix ensures that:
+
+1. The Trino client explicitly connects during startup
+2. The AppContext global variable is properly initialized
+3. Health checks now work correctly
+
+If you encounter 503 errors, check that your container has been rebuilt with the latest code:
+
+```bash
+# Rebuild and restart the container with the fix
+docker-compose stop trino-mcp
+docker-compose rm -f trino-mcp
+docker-compose up -d trino-mcp
+```
 
 ### MCP 1.3.0 SSE Transport Crashes
 
@@ -188,6 +245,8 @@ This project is organized as follows:
 - `tests/` - Automated tests
 
 Key files:
+- `llm_trino_api.py` - Standalone API server for LLM integration
+- `test_llm_api.py` - Test script for the API server
 - `test_mcp_stdio.py` - Main test script using STDIO transport (recommended)
 - `test_bullshit_query.py` - Complex query example with bullshit data
 - `load_bullshit_data.py` - Script to load generated data into Trino
@@ -229,17 +288,16 @@ python load_bullshit_data.py
 python test_bullshit_query.py
 ```
 
-This demonstrates end-to-end flow including:
-1. Initializing the MCP connection
-2. Listing available tools
-3. Executing complex queries against Trino
-4. Handling errors appropriately
-5. Processing nested JSON responses
-
-For SSE transport testing (currently broken with MCP 1.3.0):
+For testing the LLM API endpoint:
 ```bash
-# DO NOT USE until MCP SSE issues are fixed
-python scripts/test_messages.py
+# Test the Docker container API
+python test_llm_api.py 
+
+# Test the standalone API (make sure it's running first)
+python llm_trino_api.py
+curl -X POST "http://localhost:8008/query" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "SELECT 1 AS test"}'
 ```
 
 ## How LLMs Can Use This
@@ -387,11 +445,93 @@ This example demonstrates how an LLM can:
 3. Create visual representations of the data
 4. Provide meaningful insights and analysis
 
+## Accessing the API
+
+The Trino MCP server now includes two API options for accessing data:
+
+### 1. Docker Container API (Port 9097)
+
+```python
+import requests
+import json
+
+# API endpoint (default port 9097 in Docker setup)
+api_url = "http://localhost:9097/api/query"
+
+# Define your SQL query
+query_data = {
+    "query": "SELECT * FROM memory.bullshit.real_bullshit_data LIMIT 5",
+    "catalog": "memory",
+    "schema": "bullshit"
+}
+
+# Send the request
+response = requests.post(api_url, json=query_data)
+results = response.json()
+
+# Process the results
+if results["success"]:
+    print(f"Query returned {results['results']['row_count']} rows")
+    for row in results['results']['rows']:
+        print(row)
+else:
+    print(f"Query failed: {results['message']}")
+```
+
+### 2. Standalone Python API (Port 8008)
+
+```python
+# Same code as above, but with different port
+api_url = "http://localhost:8008/query"
+```
+
+Both APIs offer the following endpoints:
+- `GET /api` - API documentation and usage examples
+- `POST /api/query` - Execute SQL queries against Trino
+
+These APIs eliminate the need for wrapper scripts and let LLMs query Trino directly using REST calls, making it much simpler to integrate with services like Claude, GPT, and other AI systems.
+
+## Troubleshooting
+
+### API Returns 503 Service Unavailable
+
+If the Docker container API returns 503 errors:
+
+1. Make sure you've rebuilt the container with the latest code:
+   ```bash
+   docker-compose stop trino-mcp
+   docker-compose rm -f trino-mcp
+   docker-compose up -d trino-mcp
+   ```
+
+2. Check the container logs for errors:
+   ```bash
+   docker logs trino_mcp_trino-mcp_1
+   ```
+
+3. Verify that Trino is running properly:
+   ```bash
+   curl -s http://localhost:9095/v1/info | jq
+   ```
+
+### Port Conflicts with Standalone API
+
+The standalone API defaults to port 8008 to avoid conflicts. If you see an "address already in use" error:
+
+1. Edit `llm_trino_api.py` and change the port number in the last line:
+   ```python
+   uvicorn.run(app, host="127.0.0.1", port=8008) 
+   ```
+
+2. Run with a custom port via command line:
+   ```bash
+   python -c "import llm_trino_api; import uvicorn; uvicorn.run(llm_trino_api.app, host='127.0.0.1', port=8009)"
+   ```
+
 ## Future Work
 
-This is an early v0.1 version with many planned improvements:
+This is now in beta with these improvements planned:
 
-- [ ] **HIGH PRIORITY**: Integrate the LLM-friendly FastAPI interface directly into the MCP server, eliminating the need for separate wrapper scripts that use `docker exec`
 - [ ] Integrate with newer MCP versions when available to fix SSE transport issues
 - [ ] Add/Validate support for Hive, JDBC, and other connectors
 - [ ] Add more comprehensive query validation across different types and complexities

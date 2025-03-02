@@ -8,13 +8,15 @@ import json
 import sys
 import os
 import asyncio
+import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import AsyncIterator, Dict, Optional
+from typing import AsyncIterator, Dict, Any, List, Optional
 
 import uvicorn
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Body
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from loguru import logger
 from mcp.server.fastmcp import Context, FastMCP
 
@@ -33,6 +35,19 @@ class AppContext:
     config: ServerConfig
     is_healthy: bool = True
 
+# Models for the LLM API
+class QueryRequest(BaseModel):
+    """Model for query requests."""
+    query: str
+    catalog: str = "memory"
+    schema: Optional[str] = None
+    explain: bool = False
+
+class QueryResponse(BaseModel):
+    """Model for query responses."""
+    success: bool
+    message: str
+    results: Optional[Dict[str, Any]] = None
 
 @asynccontextmanager
 async def app_lifespan(mcp: FastMCP) -> AsyncIterator[AppContext]:
@@ -156,15 +171,19 @@ def create_app() -> FastMCP:
 
 def create_health_app() -> FastAPI:
     """
-    Create a FastAPI app that provides a health check endpoint.
+    Create a FastAPI app that provides a health check endpoint and LLM API.
     
-    This function creates a separate FastAPI app that can be used to check
-    the health of the MCP server.
+    This function creates a FastAPI app with a health check endpoint and
+    a query endpoint for LLMs to use.
     
     Returns:
-        FastAPI: The FastAPI app with health check endpoint.
+        FastAPI: The FastAPI app with health check and LLM API endpoints.
     """
-    app = FastAPI(title="Trino MCP Health API")
+    app = FastAPI(
+        title="Trino MCP API",
+        description="API for health checks and LLM query access to Trino MCP",
+        version="0.1.0"
+    )
     
     @app.get("/health")
     async def health():
@@ -177,6 +196,86 @@ def create_health_app() -> FastAPI:
             content={"status": "ok", "message": "Health check endpoint is responding"}
         )
     
+    @app.post("/api/query", response_model=QueryResponse)
+    async def query(request: QueryRequest):
+        """
+        Execute a SQL query against Trino and return results.
+        
+        This endpoint is designed to be used by LLMs to query Trino through MCP.
+        """
+        global app_context_global
+        
+        if not app_context_global or not app_context_global.is_healthy:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "success": False,
+                    "message": "Trino MCP server is not healthy or not initialized"
+                }
+            )
+            
+        logger.info(f"LLM API Query: {request.query}")
+        
+        try:
+            # Use the Trino client from the app context
+            client = app_context_global.trino_client
+            
+            # Optionally add EXPLAIN
+            query = request.query
+            if request.explain:
+                query = f"EXPLAIN {query}"
+                
+            # Execute the query
+            result = client.execute_query(query, request.catalog, request.schema)
+            
+            # Format the results for the response
+            formatted_rows = []
+            for row in result.rows:
+                # Convert row to dict using column names
+                row_dict = {}
+                for i, col in enumerate(result.columns):
+                    row_dict[col] = row[i]
+                formatted_rows.append(row_dict)
+                
+            return {
+                "success": True,
+                "message": "Query executed successfully",
+                "results": {
+                    "query_id": result.query_id,
+                    "columns": result.columns,
+                    "rows": formatted_rows,
+                    "row_count": result.row_count,
+                    "execution_time_ms": result.query_time_ms
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error executing query: {e}")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": f"Error executing query: {str(e)}"
+                }
+            )
+    
+    @app.get("/api")
+    async def api_root():
+        """Root API endpoint with usage instructions."""
+        return {
+            "message": "Trino MCP API for LLMs",
+            "version": app_context_global.config.version if app_context_global else "unknown",
+            "endpoints": {
+                "health": "GET /health - Check server health",
+                "query": "POST /api/query - Execute SQL queries"
+            },
+            "query_example": {
+                "query": "SELECT * FROM memory.bullshit.real_bullshit_data LIMIT 3",
+                "catalog": "memory",
+                "schema": "bullshit"
+            }
+        }
+    
     return app
 
 
@@ -186,6 +285,34 @@ def main() -> None:
     """
     config = parse_args()
     mcp = create_app()
+    
+    # ADDING EXPLICIT CONTEXT INITIALIZATION HERE
+    global app_context_global
+    try:
+        # Initialize the Trino client
+        logger.info(f"Connecting to Trino at {config.trino.host}:{config.trino.port}")
+        trino_client = TrinoClient(config.trino)
+        trino_client.connect()
+        
+        # Create application context
+        app_context = AppContext(
+            trino_client=trino_client,
+            config=config,
+            is_healthy=True
+        )
+        
+        # Set global context
+        app_context_global = app_context
+        
+        # Register resources and tools
+        register_trino_resources(mcp, trino_client)
+        register_trino_tools(mcp, trino_client)
+        
+        logger.info("Trino MCP server initialized and ready")
+    except Exception as e:
+        logger.error(f"Error initializing Trino MCP: {e}")
+        if app_context_global:
+            app_context_global.is_healthy = False
     
     if config.transport_type == "stdio":
         # For STDIO transport, run directly
@@ -218,7 +345,7 @@ def main() -> None:
             health_app = create_health_app()
             # Use a different port for the health check endpoint
             health_port = config.port + 1
-            logger.info(f"Starting health check endpoint on port {health_port}")
+            logger.info(f"Starting API server on port {health_port}")
             uvicorn.run(health_app, host=config.host, port=health_port)
         
         # Start the health check in a separate thread

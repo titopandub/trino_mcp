@@ -3,7 +3,7 @@
 Model Context Protocol server for Trino, providing AI models with structured access to Trino's distributed SQL query engine.
 
 ⚠️ **EARLY DEVELOPMENT STAGE (v0.1)** ⚠️  
-This project is in early development with many features still being implemented and tested. Use accordingly.
+This project is in early development with many features still being implemented and tested. Feel free to fork and contribute! Use accordingly.
 
 ## Features
 
@@ -120,6 +120,7 @@ python scripts/test_messages.py
 This is an early v0.1 version with many planned improvements:
 
 - [ ] Integrate with newer MCP versions when available to fix SSE transport issues
+- [ ] Add/Validate support for Hive, JDBC, and other connectors
 - [ ] Add more comprehensive query validation across different types and complexities
 - [ ] Implement support for more data types and advanced Trino features
 - [ ] Improve error handling and recovery mechanisms

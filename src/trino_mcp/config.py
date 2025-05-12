@@ -28,6 +28,7 @@ class TrinoConfig:
             "host": self.host,
             "port": self.port,
             "user": self.user,
+            "catalog": self.catalog,
             "http_scheme": self.http_scheme,
             "max_attempts": self.max_attempts,
             "request_timeout": self.request_timeout,

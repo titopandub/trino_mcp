@@ -46,10 +46,11 @@ class TrinoClient:
         
         This will connect to Trino with the catalog parameter if provided.
         """
-        logger.info(f"Connecting to Trino at {self.config.host}:{self.config.port}")
+        logger.info(f"Connecting to Trino at {self.config.host}:{self.config.port} with catalog {self.config.catalog}")
         
         # Create connection params including catalog from config
         conn_params = self.config.connection_params
+        logger.info(f"Connection parameters: {conn_params}")
         
         # Connect to Trino with proper parameters
         self.conn = trino.dbapi.connect(**conn_params)

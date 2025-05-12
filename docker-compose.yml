@@ -1,62 +1,4 @@
-version: '3.8'
-
 services:
-  # Hive Metastore with embedded Derby
-  hive-metastore:
-    image: apache/hive:3.1.3
-    container_name: trino_mcp_hive_metastore_1
-    environment:
-      SERVICE_NAME: metastore
-      HIVE_METASTORE_WAREHOUSE_DIR: /opt/hive/warehouse
-    command: /opt/hive/bin/hive --service metastore
-    volumes:
-      - ./data:/opt/hive/data
-      - hive-data:/opt/hive/warehouse
-    ports:
-      - "9083:9083"
-    networks:
-      - trino-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9083"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
-  # Trino service
-  trino:
-    image: trinodb/trino:latest
-    container_name: trino_mcp_trino_1
-    ports:
-      - "9095:8080"
-    volumes:
-      - ./etc:/etc/trino:ro
-      - ./data:/opt/trino/data:ro
-      - trino-data:/data/trino
-      - trino-logs:/var/log/trino
-    environment:
-      - JAVA_OPTS=-Xmx2G -XX:+UseG1GC
-    networks:
-      - trino-net
-    depends_on:
-      - hive-metastore
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 3G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-
   # MCP server for Trino
   trino-mcp:
     build: 
@@ -70,16 +12,11 @@ services:
       - mcp-logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
-      - TRINO_HOST=trino
-      - TRINO_PORT=8080
+      - TRINO_HOST=host.docker.internal
+      - TRINO_PORT=8082
       - LOG_LEVEL=INFO
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8000
-    depends_on:
-      trino:
-        condition: service_healthy
-    networks:
-      - trino-net
     deploy:
       resources:
         limits:
@@ -94,19 +31,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["sh", "-c", "echo 'TRINO_PORT: $TRINO_PORT'; python -m trino_mcp.server --transport sse --host 0.0.0.0 --port 8000 --trino-host $TRINO_HOST --trino-port $TRINO_PORT --trino-catalog $TRINO_CATALOG --trino-user $TRINO_USER --debug"]
     restart: unless-stopped
 
-networks:
-  trino-net:
-    driver: bridge
-    name: trino_network
-
 volumes:
-  trino-data:
-    name: trino_data
-  trino-logs:
-    name: trino_logs
   mcp-logs:
     name: mcp_logs
-  hive-data:
-    name: hive_warehouse_data 

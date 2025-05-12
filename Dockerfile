@@ -25,9 +25,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV MCP_HOST=0.0.0.0
 ENV MCP_PORT=8000
 ENV TRINO_HOST=trino
-ENV TRINO_PORT=8080
+ENV TRINO_PORT=8082
 ENV TRINO_USER=trino
-ENV TRINO_CATALOG=memory
+ENV TRINO_CATALOG=hive
 
 # Expose ports for SSE transport and LLM API
 EXPOSE 8000 8001
@@ -39,8 +39,6 @@ USER trino
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8001/health || exit 1
 
-# Default command (can be overridden)
-ENTRYPOINT ["python", "-m", "trino_mcp.server"]
-
-# Default arguments (can be overridden)
-CMD ["--transport", "sse", "--host", "0.0.0.0", "--port", "8000", "--trino-host", "trino", "--trino-port", "8080", "--debug"] 
+# ENTRYPOINT and CMD moved to docker-compose.yml to allow environment variable substitution
+# ENTRYPOINT ["python", "-m", "trino_mcp.server"]
+# CMD ["--transport", "sse", "--host", "0.0.0.0", "--port", "8000", "--trino-host", "trino", "--trino-port", "8082", "--debug"]

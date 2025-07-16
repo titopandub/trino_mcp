@@ -132,16 +132,6 @@ def register_trino_tools(mcp: FastMCP, client: TrinoClient) -> None:
         try:
             table_details = client.get_table_details(catalog, schema, table)
             
-            # Try to get a row count (this might not work on all connectors)
-            try:
-                count_result = client.execute_query(
-                    f"SELECT count(*) AS row_count FROM {catalog}.{schema}.{table}"
-                )
-                if count_result.rows and count_result.rows[0]:
-                    table_details["row_count"] = count_result.rows[0][0]
-            except Exception as e:
-                logger.warning(f"Failed to get row count: {e}")
-                
             # Get additional info from the information_schema if available
             try:
                 info_schema_query = f"""
